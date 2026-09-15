@@ -16,6 +16,10 @@ import {
 } from './gearing.js';
 
 const $ = (id) => document.getElementById(id);
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+/** Bike names are free text and several renderers build markup as strings. */
+const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 const MPH_TO_KMH = 1.609344;
 const MAX_ROWS = 200;
 const MAX_BIKES = 3;
@@ -616,7 +620,7 @@ function renderSummary(summaries, ride) {
   ];
 
   els.summaryThead.innerHTML = `<tr><th></th>${summaries
-    .map((s) => `<th>${swatch(s.index)}${s.label}</th>`)
+    .map((s) => `<th>${swatch(s.index)}${esc(s.label)}</th>`)
     .join('')}</tr>`;
   els.summaryTbody.innerHTML = rows
     .map(([label, valueFn]) => `<tr><th scope="row">${label}</th>${summaries.map((s) => `<td>${valueFn(s)}</td>`).join('')}</tr>`)
@@ -645,7 +649,7 @@ function renderBySpeedTable(series, layout, ride) {
 
     const cells = [`${speedDisplay.toFixed(1)} ${unitLabel(ride.unit)}`];
     if (layout === 'ring') cells.push(`${swatch(seriesIndex)}${best.ring}T`, `${best.cog}T`);
-    else if (layout === 'bike') cells.push(`${swatch(seriesIndex)}${label}`, `${best.ring}T / ${best.cog}T`);
+    else if (layout === 'bike') cells.push(`${swatch(seriesIndex)}${esc(label)}`, `${best.ring}T / ${best.cog}T`);
     else cells.push(`${best.ring}T / ${best.cog}T`);
 
     cells.push(
@@ -665,7 +669,7 @@ function renderAllGearsTable(groups, ride) {
     if (showHeader) {
       const header = document.createElement('tr');
       header.className = 'group-row';
-      header.innerHTML = `<td colspan="8">${label}</td>`;
+      header.innerHTML = `<td colspan="8">${esc(label)}</td>`;
       els.allGearsTbody.appendChild(header);
     }
     for (const row of rows) {
@@ -755,7 +759,7 @@ function plotMarkup(s, ride, xFor, yFor, { dotRadius, labelEvery, plotTop, plotB
     const onSmallRing = multiRing && p.best.ring !== bigRing;
     const ringNote = multiRing ? ` on the ${p.best.ring}T ring` : '';
     const title = `${s.label} @ ${p.speedDisplay.toFixed(1)} ${unitLabel(ride.unit)}: ${p.best.ring}T/${p.best.cog}T, ${p.best.cadence.toFixed(0)} rpm (${deltaLabel(p.feel.delta)})${ringNote}`;
-    out += `<circle cx="${x}" cy="${y}" r="${dotRadius}" class="${onSmallRing ? 'open' : 'dot'}-${cls}"><title>${title}</title></circle>`;
+    out += `<circle cx="${x}" cy="${y}" r="${dotRadius}" class="${onSmallRing ? 'open' : 'dot'}-${cls}"><title>${esc(title)}</title></circle>`;
     if (i % labelEvery === 0) {
       // Sit above the marker, flipping below when there's no room up top.
       const fitsAbove = y - dotRadius - 5 > plotTop;
@@ -786,7 +790,7 @@ function renderChart(series, ride) {
     const plotBottom = top + panelH;
     const yFor = (c) => plotBottom - ((c - minC) / (maxC - minC)) * (plotBottom - plotTop);
 
-    body += `<text x="${CHART_PAD_L}" y="${top + 11}" class="panel-title" fill="${SERIES_COLORS[si % SERIES_COLORS.length]}">${s.label}</text>`;
+    body += `<text x="${CHART_PAD_L}" y="${top + 11}" class="panel-title" fill="${SERIES_COLORS[si % SERIES_COLORS.length]}">${esc(s.label)}</text>`;
     for (const val of [maxC, minC]) {
       const y = yFor(val);
       body += `<line x1="${CHART_PAD_L}" y1="${y}" x2="${CHART_W - CHART_PAD_R}" y2="${y}" class="grid-line" />`;

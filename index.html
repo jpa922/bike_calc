@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- The app loads nothing external and talks to no network, so lock it down:
+       this also blocks inline event handlers, neutering any markup injection. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
   <title>Bike Gearing Calculator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
