@@ -66,6 +66,7 @@ const els = {
 
   resultsPanel: $('results-panel'),
   summaryWrap: $('summary-wrap'),
+  summaryThead: document.querySelector('#summary-table thead'),
   summaryTbody: document.querySelector('#summary-table tbody'),
   bySpeedThead: document.querySelector('#by-speed-table thead'),
   bySpeedTbody: document.querySelector('#by-speed-table tbody'),
@@ -526,6 +527,7 @@ function computeSummaries(bikeCfgs, ride) {
     return {
       label: cfg.label,
       index: cfg.index,
+      circMm: cfg.circMm,
       gearing: `${ringsLabel(cfg.rings)} × ${cogsLabel(cfg.cogs)}`,
       gearCount: cfg.gears.length,
       ringMode: cfg.ringMode,
@@ -581,27 +583,44 @@ function swatch(index) {
 
 const MODE_NOTE = { synchro: 'synchro ladder', optimal: 'optimal (not rideable)', 'per-ring': 'within each ring' };
 
+/**
+ * Bikes as columns, metrics as rows. Transposed because comparing a metric
+ * across bikes means reading along one row, and because at most four columns
+ * fits the page without a horizontal scrollbar.
+ */
 function renderSummary(summaries, ride) {
   els.summaryWrap.hidden = false;
-  els.summaryTbody.innerHTML = '';
-  for (const s of summaries) {
-    const tr = document.createElement('tr');
-    const modeNote = s.isMultiRing ? ` <span class="muted-note">${MODE_NOTE[s.ringMode]}, ${s.gearCount} gears</span>` : '';
-    const cov = `${(s.coverage.fraction * 100).toFixed(0)}%`;
-    const covTitle = `Holds ${ride.preferredCadence} rpm from ${fmtSpeed(s.coverage.lowKmh, ride.unit)} to ${fmtSpeed(s.coverage.highKmh, ride.unit)}`;
-    tr.innerHTML = [
-      `${swatch(s.index)}${s.label}`,
-      `${s.gearing}${modeNote}`,
-      `${s.rangePct.toFixed(0)}%`,
-      `<span title="Widest step ${s.worstStepPct.toFixed(1)}%">±${s.holdRpm.toFixed(1)} rpm</span>`,
-      `<span title="${covTitle}">${cov}</span>`,
-      `${s.easiest.combo.ring}/${s.easiest.combo.cog} — ${(s.easiest.dev / 1000).toFixed(2)} m, ${fmtSpeed(s.easiest.speedKmh, ride.unit)}`,
-      `${s.hardest.combo.ring}/${s.hardest.combo.cog} — ${(s.hardest.dev / 1000).toFixed(2)} m, ${fmtSpeed(s.hardest.speedKmh, ride.unit)}`,
-    ]
-      .map((c) => `<td>${c}</td>`)
-      .join('');
-    els.summaryTbody.appendChild(tr);
-  }
+
+  const gearCell = (side) =>
+    `${side.combo.ring}/${side.combo.cog}<br><span class="muted-note">${(side.dev / 1000).toFixed(2)} m · ${fmtSpeed(side.speedKmh, ride.unit)}</span>`;
+
+  const rows = [
+    ['Wheel', (s) => `${s.circMm.toFixed(0)} mm`],
+    [
+      'Gearing',
+      (s) =>
+        `${s.gearing}${s.isMultiRing ? `<br><span class="muted-note">${MODE_NOTE[s.ringMode]}, ${s.gearCount} gears</span>` : ''}`,
+    ],
+    ['Total range', (s) => `${s.rangePct.toFixed(0)}%`],
+    [
+      'Cadence hold',
+      (s) => `<span title="Widest step ${s.worstStepPct.toFixed(1)}%">±${s.holdRpm.toFixed(1)} rpm</span>`,
+    ],
+    [
+      'Coverage',
+      (s) =>
+        `<span title="Holds ${ride.preferredCadence} rpm from ${fmtSpeed(s.coverage.lowKmh, ride.unit)} to ${fmtSpeed(s.coverage.highKmh, ride.unit)}">${(s.coverage.fraction * 100).toFixed(0)}%</span>`,
+    ],
+    ['Easiest gear', (s) => gearCell(s.easiest)],
+    ['Hardest gear', (s) => gearCell(s.hardest)],
+  ];
+
+  els.summaryThead.innerHTML = `<tr><th></th>${summaries
+    .map((s) => `<th>${swatch(s.index)}${s.label}</th>`)
+    .join('')}</tr>`;
+  els.summaryTbody.innerHTML = rows
+    .map(([label, valueFn]) => `<tr><th scope="row">${label}</th>${summaries.map((s) => `<td>${valueFn(s)}</td>`).join('')}</tr>`)
+    .join('');
 }
 
 function renderBySpeedTable(series, layout, ride) {
@@ -683,6 +702,10 @@ const CHART_STYLE = `
     .dot-good, .delta-good { fill: var(--good); }
     .dot-warn, .delta-warn { fill: var(--warn); }
     .dot-bad, .delta-bad { fill: var(--bad); }
+    .open-good, .open-warn, .open-bad { fill: var(--panel-bg); stroke-width: 1.6; }
+    .open-good { stroke: var(--good); }
+    .open-warn { stroke: var(--warn); }
+    .open-bad { stroke: var(--bad); }
   </style>`;
 
 /** Signed rpm difference from target: "+4", "-12", "0". */
@@ -719,13 +742,20 @@ function xTickMarkup(speeds, xFor, y) {
  * so a line would draw a trajectory the drivetrain never travels.
  */
 function plotMarkup(s, ride, xFor, yFor, { dotRadius, labelEvery, plotTop, plotBottom }) {
+  // On a multi-ring bike, hollow marks the small ring and solid the big one, so
+  // you can see which ring a gear choice sits on without spending the colour.
+  const multiRing = s.cfg.rings.length > 1;
+  const bigRing = Math.max(...s.cfg.rings);
+
   let out = '';
   s.points.forEach((p, i) => {
     const x = xFor(i);
     const y = yFor(p.best.cadence);
     const cls = feelPillClass(p.feel.label);
-    const title = `${s.label} @ ${p.speedDisplay.toFixed(1)} ${unitLabel(ride.unit)}: ${p.best.ring}T/${p.best.cog}T, ${p.best.cadence.toFixed(0)} rpm (${deltaLabel(p.feel.delta)})`;
-    out += `<circle cx="${x}" cy="${y}" r="${dotRadius}" class="dot-${cls}"><title>${title}</title></circle>`;
+    const onSmallRing = multiRing && p.best.ring !== bigRing;
+    const ringNote = multiRing ? ` on the ${p.best.ring}T ring` : '';
+    const title = `${s.label} @ ${p.speedDisplay.toFixed(1)} ${unitLabel(ride.unit)}: ${p.best.ring}T/${p.best.cog}T, ${p.best.cadence.toFixed(0)} rpm (${deltaLabel(p.feel.delta)})${ringNote}`;
+    out += `<circle cx="${x}" cy="${y}" r="${dotRadius}" class="${onSmallRing ? 'open' : 'dot'}-${cls}"><title>${title}</title></circle>`;
     if (i % labelEvery === 0) {
       // Sit above the marker, flipping below when there's no room up top.
       const fitsAbove = y - dotRadius - 5 > plotTop;
@@ -778,10 +808,16 @@ function renderChart(series, ride) {
   els.chart.setAttribute('viewBox', `0 0 ${CHART_W} ${H}`);
   els.chart.innerHTML = CHART_STYLE + body;
 
+  const ringKey = series.some((s) => s.cfg.rings.length > 1)
+    ? `<span class="legend-item"><span class="dot-key hollow"></span>small ring</span>
+       <span class="legend-item"><span class="dot-key solid"></span>big ring</span>`
+    : '';
+
   els.chartLegend.innerHTML = `
     <span class="legend-item"><span class="dot-key good"></span>on target (within 3 rpm)</span>
     <span class="legend-item"><span class="dot-key warn"></span>slightly off</span>
     <span class="legend-item"><span class="dot-key bad"></span>grinding / spun out</span>
+    ${ringKey}
     <span class="legend-item legend-note">numbers are rpm above or below your target</span>`;
 }
 

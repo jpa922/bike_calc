@@ -146,7 +146,25 @@ main {
 .danger-btn:hover { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 
 #summary-wrap { margin-bottom: 20px; }
-#summary-table td { white-space: nowrap; }
+
+/* Bikes as columns: at most four, so it fits without a horizontal scrollbar. */
+.matrix-table { table-layout: fixed; }
+.matrix-table th,
+.matrix-table td {
+  white-space: normal;
+  vertical-align: top;
+  word-break: break-word;
+}
+.matrix-table thead th { padding-bottom: 8px; }
+.matrix-table tbody th[scope='row'] {
+  width: 7.5rem;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.matrix-table .muted-note { display: inline-block; line-height: 1.3; }
 
 .grid {
   display: grid;
@@ -281,6 +299,8 @@ tr:hover td { background: var(--track); }
   margin-right: 5px;
 }
 .dot-key { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.dot-key.solid { background: var(--muted); }
+.dot-key.hollow { background: var(--panel-bg); border: 1.5px solid var(--muted); }
 .legend-note { font-style: italic; }
 .dot-key.good { background: var(--good); }
 .dot-key.warn { background: var(--warn); }
