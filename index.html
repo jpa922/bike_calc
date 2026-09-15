@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bike Gearing Calculator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Bike Gearing Calculator</h1>
+    <p class="subtitle">Find the gear that gets you closest to your preferred cadence at any speed — on up to three bikes at once.</p>
+  </header>
+
+  <main>
+    <section class="panel" id="bikes-panel">
+      <div class="panel-head">
+        <h2>1. Bikes</h2>
+        <button id="add-bike-btn" class="secondary-btn">+ Add bike</button>
+      </div>
+      <div class="bike-tabs" id="bike-tabs" role="tablist"></div>
+      <p class="hint" id="multi-bike-hint" hidden>Comparing bikes picks the best gear across each bike's whole drivetrain. Add only one bike to compare small vs. big ring instead.</p>
+
+      <div class="bike-editor">
+        <div class="grid">
+          <label>
+            Bike name
+            <input type="text" id="bike-name" maxlength="24" />
+          </label>
+          <label>
+            Crank length (mm)
+            <input type="number" id="crank-length" min="100" max="250" step="0.5" value="172.5" />
+          </label>
+        </div>
+
+        <h3>Wheel &amp; tire</h3>
+        <div class="grid">
+          <label>
+            Rim size
+            <select id="rim-preset"></select>
+          </label>
+          <label id="custom-bsd-wrap" hidden>
+            Custom BSD (mm)
+            <input type="number" id="custom-bsd" min="200" max="700" step="1" value="622" />
+          </label>
+          <label>
+            Tire width
+            <select id="tire-preset"></select>
+          </label>
+          <label id="custom-tire-wrap" hidden>
+            Custom tire width (mm)
+            <input type="number" id="custom-tire" min="15" max="80" step="0.5" value="28" />
+          </label>
+          <label>
+            Tire profile factor
+            <input type="range" id="profile-factor" min="0.8" max="1.15" step="0.01" value="1.0" />
+            <span class="range-value" id="profile-factor-value">1.00</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="use-override-circ" />
+            Override with measured rollout circumference
+          </label>
+          <label id="override-circ-wrap" hidden>
+            Measured circumference (mm)
+            <input type="number" id="override-circ" min="500" max="3000" step="1" placeholder="e.g. 2105" />
+          </label>
+        </div>
+        <p class="computed-line">Wheel diameter: <strong id="wheel-diameter-out">—</strong> &nbsp;|&nbsp; Circumference: <strong id="wheel-circ-out">—</strong></p>
+
+        <h3>Drivetrain</h3>
+        <div class="grid">
+          <label>
+            Category
+            <select id="category-select"></select>
+          </label>
+          <label>
+            Chainring(s)
+            <select id="ring-preset"></select>
+          </label>
+          <label id="custom-rings-wrap" hidden>
+            Custom ring teeth (comma-separated)
+            <input type="text" id="custom-rings" placeholder="e.g. 50,34" />
+          </label>
+          <label>
+            Cassette
+            <select id="cassette-preset"></select>
+          </label>
+          <label id="custom-cogs-wrap" hidden>
+            Custom cog teeth (comma-separated)
+            <input type="text" id="custom-cogs" placeholder="e.g. 11,13,15,18,21,25,28,32" />
+          </label>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="avoid-cross-chain" checked />
+          Avoid extreme cross-chaining (big/big, small/small combos)
+        </label>
+
+        <fieldset id="ring-mode-wrap" class="ring-mode" hidden>
+          <legend>How this 2x drivetrain gets used</legend>
+          <label class="radio-row">
+            <input type="radio" name="ring-mode" value="synchro" checked />
+            <span><strong>Synchro / sequential</strong> — one ladder of gears, the way Di2 Full Synchro and AXS Sequential ride it</span>
+          </label>
+          <label class="radio-row" id="per-ring-option">
+            <input type="radio" name="ring-mode" value="per-ring" />
+            <span><strong>Within each ring</strong> — compare staying in the small vs. big ring</span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="ring-mode" value="optimal" />
+            <span><strong>Optimal</strong> — best gear anywhere, ignoring what it takes to get there (a ceiling, not a ride)</span>
+          </label>
+          <label id="compensation-wrap" class="inline-field">
+            Rear cogs compensated on a ring shift
+            <input type="number" id="compensation-cogs" min="1" max="4" step="1" value="2" />
+          </label>
+        </fieldset>
+
+        <button id="remove-bike-btn" class="danger-btn" hidden>Remove this bike</button>
+      </div>
+    </section>
+
+    <section class="panel" id="ride-panel">
+      <h2>2. Ride parameters</h2>
+      <p class="hint">Shared across every bike, so the comparison is like-for-like.</p>
+      <div class="grid">
+        <label>
+          Preferred cadence (rpm)
+          <input type="number" id="preferred-cadence" min="40" max="130" step="1" value="90" />
+        </label>
+        <label>
+          Speed unit
+          <select id="speed-unit">
+            <option value="kmh">km/h</option>
+            <option value="mph">mph</option>
+          </select>
+        </label>
+        <label>
+          Min speed
+          <input type="number" id="speed-min" min="1" step="1" value="10" />
+        </label>
+        <label>
+          Max speed
+          <input type="number" id="speed-max" min="1" step="1" value="40" />
+        </label>
+        <label>
+          Step
+          <input type="number" id="speed-step" min="0.5" step="0.5" value="2" />
+        </label>
+      </div>
+      <button id="calculate-btn">Calculate</button>
+      <ul id="form-errors" class="form-errors" hidden></ul>
+    </section>
+
+    <section class="panel" id="results-panel" hidden>
+      <div id="summary-wrap">
+        <h2>Summary</h2>
+        <p class="hint"><strong>Cadence hold</strong> is the worst deviation the widest gear step forces on you, assuming you shift at the right moment. <strong>Coverage</strong> is how much of your speed range has a gear that can hold the target at all. Both are exact — neither depends on your speed step.</p>
+        <div class="table-wrap">
+          <table id="summary-table">
+            <thead>
+              <tr>
+                <th>Bike</th>
+                <th>Gearing</th>
+                <th>Range</th>
+                <th>Cadence hold</th>
+                <th>Coverage</th>
+                <th>Easiest gear</th>
+                <th>Hardest gear</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" id="tab-btn-by-speed" role="tab" aria-selected="true" aria-controls="tab-by-speed" data-tab="by-speed">By Speed</button>
+        <button class="tab-btn" id="tab-btn-all-gears" role="tab" aria-selected="false" aria-controls="tab-all-gears" data-tab="all-gears">All Gears</button>
+      </div>
+
+      <div class="tab-content" id="tab-by-speed" role="tabpanel" aria-labelledby="tab-btn-by-speed">
+        <h2>Best gear at each speed</h2>
+        <p class="hint">Each marker is the closest gear available at that speed — colour and number show how far off your target cadence it lands.</p>
+        <div class="chart-wrap">
+          <svg id="cadence-chart" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet"></svg>
+          <div id="chart-legend" class="legend"></div>
+        </div>
+        <div class="table-wrap">
+          <table id="by-speed-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-all-gears" role="tabpanel" aria-labelledby="tab-btn-all-gears" hidden>
+        <h2>Every gear combination</h2>
+        <p class="computed-line">Grouped by chainring, easiest to hardest. “Jump to next” is the step to the next cog <em>on the same ring</em> — the shift you'd actually make.</p>
+        <div class="table-wrap">
+          <table id="all-gears-table">
+            <thead>
+              <tr>
+                <th>Gear</th>
+                <th>Ratio</th>
+                <th>Development</th>
+                <th>Gear inches</th>
+                <th>Gain ratio</th>
+                <th>Speed @ preferred cadence</th>
+                <th>Jump to next</th>
+                <th>Feel</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Tooth counts were checked against manufacturer and retailer listings in September 2026; entries that couldn't be confirmed were left out. Use Custom for anything not listed.</p>
+  </footer>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
