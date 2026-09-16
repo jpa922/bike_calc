@@ -75,6 +75,7 @@ const els = {
   bySpeedThead: document.querySelector('#by-speed-table thead'),
   bySpeedTbody: document.querySelector('#by-speed-table tbody'),
   allGearsTbody: document.querySelector('#all-gears-table tbody'),
+  speedAtCadenceTh: $('speed-at-cadence-th'),
   chart: $('cadence-chart'),
   chartLegend: $('chart-legend'),
   tabBtns: document.querySelectorAll('.tab-btn'),
@@ -130,8 +131,49 @@ function effectiveRingMode(bike, bikeCount) {
   return bike.ringMode;
 }
 
+/**
+ * Three bikes to open on, so the tool shows what it does instead of presenting
+ * an empty form. Matched on tooth counts rather than option positions.
+ */
+const DEFAULT_BIKES = [
+  { name: 'Road', category: 'road', tireMm: 28,
+    ring: { min: 36, max: 52, brand: 'Shimano' },
+    cassette: { min: 11, max: 34, count: 12, brand: 'Shimano' } },
+  { name: 'Gravel', category: 'gravel', tireMm: 42,
+    ring: { min: 40, max: 40, brand: 'SRAM' },
+    cassette: { min: 10, max: 44, count: 12, brand: 'SRAM' } },
+  { name: 'MTB', category: 'mtb', tireMm: 60,
+    ring: { min: 32, max: 32, brand: 'Shimano' },
+    cassette: { min: 10, max: 51, count: 12, brand: 'Shimano' } },
+];
+
+function optionIndex(options, spec) {
+  const found = options.findIndex((o) => {
+    const teeth = o.teeth;
+    return (
+      Math.min(...teeth) === spec.min &&
+      Math.max(...teeth) === spec.max &&
+      (spec.count === undefined || teeth.length === spec.count) &&
+      (spec.brand === undefined || o.brands.includes(spec.brand))
+    );
+  });
+  return found >= 0 ? String(found) : '0';
+}
+
+function buildDefaultBikes() {
+  return DEFAULT_BIKES.map((spec) => {
+    const bike = createBike(spec.name);
+    bike.category = spec.category;
+    const tire = TIRE_WIDTH_PRESETS.findIndex((t) => t.mm === spec.tireMm);
+    if (tire >= 0) bike.tirePreset = String(tire);
+    bike.ringPreset = optionIndex(RING_OPTIONS[spec.category] || [], spec.ring);
+    bike.cassettePreset = optionIndex(CASSETTE_OPTIONS[spec.category] || [], spec.cassette);
+    return bike;
+  });
+}
+
 const state = {
-  bikes: [createBike('Bike 1')],
+  bikes: buildDefaultBikes(),
   activeIndex: 0,
   speedUnit: 'mph', // tracked so a unit switch can convert the range in place
   lastChart: null, // kept so a viewport change can redraw at the new width
@@ -707,6 +749,7 @@ function renderBySpeedTable(series, layout, ride) {
 }
 
 function renderAllGearsTable(groups, ride) {
+  els.speedAtCadenceTh.textContent = `Speed @ ${ride.preferredCadence} rpm`;
   els.allGearsTbody.innerHTML = '';
   for (const { label, rows, showHeader } of groups) {
     if (showHeader) {
@@ -976,6 +1019,9 @@ function init() {
   loadBikeIntoForm(activeBike());
   renderBikeTabs();
   wireEvents();
+  // Last: runCalculation() saves the form into the active bike, so the form
+  // has to be populated from state first or it would overwrite bike 1.
+  runCalculation();
 }
 
 init();

@@ -16,7 +16,10 @@
 //   SRAM gravel ........... XG-1271 XPLR 10-44 (SRAM support article)
 //   SRAM MTB .............. XG-1299 10-50, XG-1295 10-52 (sram.com)
 //   Campagnolo road 12s ... campagnolo.com Chorus 12s sprockets
+//   Campagnolo road 13s ... campagnolo.com Super Record 13 sprockets + crankset
 //   Campagnolo Ekar 13s ... bikepacking.com Ekar launch coverage
+//   Campagnolo gravel 13s  campagnolo.com Super Record X (shared with Ekar GT)
+//   SRAM gravel 13s ...... sram.com XG-1391 Red XPLR 10-46
 //
 // Known uncertainty: the Ekar 10-44's second-largest cog is listed as 38T by
 // some retailers and 39T by others; 39T is used here.
@@ -58,10 +61,14 @@ const RING_SOURCES = {
     { brand: 'SRAM', teeth: [50, 37] },
     { brand: 'SRAM', teeth: [48, 35] },
     { brand: 'SRAM', teeth: [46, 33] },
-    // Campagnolo 12s (Super Record / Record / Chorus)
+    // Campagnolo 12s (Super Record / Record / Chorus) and Super Record 13
+    { brand: 'Campagnolo', teeth: [55, 39] },
+    { brand: 'Campagnolo', teeth: [54, 39] },
     { brand: 'Campagnolo', teeth: [53, 39] },
     { brand: 'Campagnolo', teeth: [52, 36] },
     { brand: 'Campagnolo', teeth: [50, 34] },
+    { brand: 'Campagnolo', teeth: [48, 32] },
+    { brand: 'Campagnolo', teeth: [45, 29] },
   ],
   gravel: [
     // Shimano GRX (RX820 2x, RX610 2x, 1x)
@@ -115,6 +122,11 @@ const CASSETTE_SOURCES = {
     // SRAM 11s (PG-1170)
     { brand: 'SRAM', teeth: [11, 12, 13, 14, 15, 16, 17, 19, 21, 23, 25] },
     { brand: 'SRAM', teeth: [11, 12, 13, 14, 15, 16, 17, 19, 22, 25, 28] },
+    // Campagnolo 13s (Super Record 13)
+    { brand: 'Campagnolo', teeth: [10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 26, 29] },
+    { brand: 'Campagnolo', teeth: [10, 11, 12, 13, 14, 15, 16, 18, 20, 23, 26, 29, 33] },
+    { brand: 'Campagnolo', teeth: [11, 12, 13, 14, 15, 16, 17, 18, 20, 23, 26, 29, 32] },
+    { brand: 'Campagnolo', teeth: [11, 12, 13, 14, 15, 16, 18, 20, 23, 26, 29, 32, 36] },
     // Campagnolo 12s
     { brand: 'Campagnolo', teeth: [11, 12, 13, 14, 15, 16, 17, 19, 21, 23, 26, 29] },
     { brand: 'Campagnolo', teeth: [11, 12, 13, 14, 15, 16, 17, 19, 22, 25, 28, 32] },
@@ -128,12 +140,14 @@ const CASSETTE_SOURCES = {
     { brand: 'Shimano', teeth: [10, 12, 14, 16, 18, 21, 24, 28, 32, 36, 40, 45] },
     { brand: 'Shimano', teeth: [10, 12, 14, 16, 18, 21, 24, 28, 33, 39, 45, 51] },
     // SRAM XPLR / Wide
+    { brand: 'SRAM', teeth: [10, 11, 12, 13, 15, 17, 19, 21, 24, 28, 32, 38, 46] },
     { brand: 'SRAM', teeth: [10, 11, 13, 15, 17, 19, 21, 24, 28, 32, 38, 44] },
     { brand: 'SRAM', teeth: [10, 11, 12, 13, 15, 17, 19, 21, 24, 28, 32, 36] },
     // Campagnolo Ekar 13s
     { brand: 'Campagnolo', teeth: [9, 10, 11, 12, 13, 14, 16, 18, 20, 23, 27, 31, 36] },
     { brand: 'Campagnolo', teeth: [9, 10, 11, 12, 13, 14, 16, 18, 21, 25, 30, 36, 42] },
     { brand: 'Campagnolo', teeth: [10, 11, 12, 13, 14, 15, 17, 19, 22, 26, 32, 39, 44] },
+    { brand: 'Campagnolo', teeth: [10, 11, 12, 13, 14, 16, 18, 21, 25, 30, 36, 42, 48] },
   ],
   mtb: [
     { brand: 'Shimano', teeth: [10, 12, 14, 16, 18, 21, 24, 28, 33, 39, 45, 51] },
