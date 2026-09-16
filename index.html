@@ -13,7 +13,7 @@
 <body>
   <header>
     <h1>Bike Gearing Calculator</h1>
-    <p class="subtitle">Find the gear that gets you closest to your preferred cadence at any speed — on up to three bikes at once.</p>
+    <p class="subtitle">Compare up to three drivetrains and see which one holds your cadence.</p>
   </header>
 
   <main>
@@ -23,7 +23,7 @@
         <button id="add-bike-btn" class="secondary-btn">+ Add bike</button>
       </div>
       <div class="bike-tabs" id="bike-tabs" role="tablist"></div>
-      <p class="hint" id="multi-bike-hint" hidden>Comparing bikes picks the best gear across each bike's whole drivetrain. Add only one bike to compare small vs. big ring instead.</p>
+      <p class="hint" id="multi-bike-hint" hidden>With more than one bike, each is read as a single run of gears. Drop back to one bike to compare its small vs. big ring.</p>
 
       <div class="bike-editor">
         <div class="grid">
@@ -134,21 +134,27 @@
         <label>
           Speed unit
           <select id="speed-unit">
+            <option value="mph" selected>mph</option>
             <option value="kmh">km/h</option>
-            <option value="mph">mph</option>
           </select>
         </label>
+      </div>
+      <div class="presets">
+        <span class="presets-label">Quick ranges</span>
+        <span id="speed-presets"></span>
+      </div>
+      <div class="grid">
         <label>
           Min speed
-          <input type="number" id="speed-min" min="1" step="1" value="10" />
+          <input type="number" id="speed-min" min="1" step="1" value="4" />
         </label>
         <label>
           Max speed
-          <input type="number" id="speed-max" min="1" step="1" value="40" />
+          <input type="number" id="speed-max" min="1" step="1" value="24" />
         </label>
         <label>
           Step
-          <input type="number" id="speed-step" min="0.5" step="0.5" value="2" />
+          <input type="number" id="speed-step" min="0.5" step="0.5" value="1" />
         </label>
       </div>
       <button id="calculate-btn">Calculate</button>
@@ -201,7 +207,6 @@
                 <th>Gain ratio</th>
                 <th>Speed @ preferred cadence</th>
                 <th>Jump to next</th>
-                <th>Feel</th>
               </tr>
             </thead>
             <tbody></tbody>

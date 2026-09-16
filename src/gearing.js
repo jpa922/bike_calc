@@ -1,4 +1,4 @@
-// Core gear-ratio / cadence / speed physics, plus "feel" translation helpers.
+// Core gear-ratio / cadence / speed physics, plus gearing-quality metrics.
 
 export function gearRatio(ringTeeth, cogTeeth) {
   return ringTeeth / cogTeeth;
@@ -195,18 +195,6 @@ export function cadenceCoverage({ gears, circumferenceMm, targetCadence, minSpee
   }
   const overlap = Math.max(0, Math.min(highKmh, maxSpeedKmh) - Math.max(lowKmh, minSpeedKmh));
   return { lowKmh, highKmh, fraction: overlap / span };
-}
-
-/** Qualitative "feel" bucket from development (how far you travel per pedal stroke). */
-export function feelFromDevelopment(devMm) {
-  const m = devMm / 1000;
-  if (m < 2) return { label: 'Very easy spin', hint: 'steep climbing gear' };
-  if (m < 3.5) return { label: 'Easy', hint: 'climbing / low-effort cruising' };
-  if (m < 5) return { label: 'Moderate', hint: 'rolling terrain' };
-  if (m < 6.5) return { label: 'Brisk', hint: 'steady flat cruising' };
-  if (m < 8) return { label: 'Fast', hint: 'pushing the pace on the flat' };
-  if (m < 9.5) return { label: 'Very fast', hint: 'high speed / strong effort' };
-  return { label: 'Maximal', hint: 'sprint or fast descent gear' };
 }
 
 /** How the cadence you'll actually spin compares to what you wanted. */

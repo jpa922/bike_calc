@@ -7,7 +7,6 @@ import {
   developmentMm,
   gearInches,
   gainRatio,
-  feelFromDevelopment,
   cadenceFeel,
   speedKmhFromCadence,
   largestStepFactor,
@@ -62,6 +61,7 @@ const els = {
 
   preferredCadence: $('preferred-cadence'),
   speedUnit: $('speed-unit'),
+  speedPresets: $('speed-presets'),
   speedMin: $('speed-min'),
   speedMax: $('speed-max'),
   speedStep: $('speed-step'),
@@ -133,6 +133,7 @@ function effectiveRingMode(bike, bikeCount) {
 const state = {
   bikes: [createBike('Bike 1')],
   activeIndex: 0,
+  speedUnit: 'mph', // tracked so a unit switch can convert the range in place
   lastChart: null, // kept so a viewport change can redraw at the new width
 };
 const activeBike = () => state.bikes[state.activeIndex];
@@ -375,6 +376,49 @@ function readRideParams() {
   };
 }
 
+/**
+ * Speed bands riders actually think in. Each unit gets its own round numbers
+ * rather than a converted value, and these only pre-fill the min/max/step
+ * inputs — they stay visible and editable.
+ */
+const SPEED_PRESETS = [
+  { label: 'Climbing', mph: [3, 12, 0.5], kmh: [5, 20, 1] },
+  { label: 'Rolling', mph: [10, 22, 1], kmh: [16, 35, 2] },
+  { label: 'Fast group', mph: [16, 32, 1], kmh: [26, 50, 2] },
+  { label: 'Everything', mph: [3, 32, 1], kmh: [5, 50, 2] },
+];
+
+function renderSpeedPresets() {
+  els.speedPresets.innerHTML = '';
+  SPEED_PRESETS.forEach((preset) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-btn';
+    btn.textContent = preset.label;
+    btn.addEventListener('click', () => {
+      const [min, max, step] = preset[els.speedUnit.value];
+      els.speedMin.value = min;
+      els.speedMax.value = max;
+      els.speedStep.value = step;
+      runCalculation();
+    });
+    els.speedPresets.appendChild(btn);
+  });
+}
+
+/** Switching units should keep the same real-world range, not reinterpret it. */
+function convertSpeedFields(fromUnit, toUnit) {
+  if (fromUnit === toUnit) return;
+  const factor = toUnit === 'kmh' ? MPH_TO_KMH : 1 / MPH_TO_KMH;
+  const scale = (el, round) => {
+    const v = parseFloat(el.value);
+    if (Number.isFinite(v)) el.value = round(v * factor);
+  };
+  scale(els.speedMin, (v) => Math.max(1, Math.round(v)));
+  scale(els.speedMax, (v) => Math.max(1, Math.round(v)));
+  scale(els.speedStep, (v) => Math.max(0.5, Math.round(v * 2) / 2));
+}
+
 function showErrors(errors) {
   els.formErrors.innerHTML = '';
   for (const message of errors) {
@@ -451,7 +495,6 @@ function computeSeries(bikeCfgs, ride) {
             speedDisplay: v,
             best,
             feel: cadenceFeel(best.cadence, ride.preferredCadence),
-            devFeel: feelFromDevelopment(best.developmentMm),
           };
         }),
       })),
@@ -472,7 +515,6 @@ function computeAllGearGroups(bikeCfgs, ride) {
         gearInches: gearInches(c.ring, c.cog, wheelDiameterMm),
         gainRatio: gainRatio(c.ring, c.cog, wheelDiameterMm, cfg.crankLength),
         speedAtPreferredKmh: speedKmhFromCadence(ride.preferredCadence, dev),
-        feel: feelFromDevelopment(dev),
       };
     };
     const addJumps = (rows) => {
@@ -631,9 +673,9 @@ function renderSummary(summaries, ride) {
 
 function renderBySpeedTable(series, layout, ride) {
   const headers = {
-    single: ['Speed', 'Gear', 'Ratio', 'Cadence', 'vs. preferred', 'Feel'],
-    ring: ['Speed', 'Ring', 'Cog', 'Ratio', 'Cadence', 'vs. preferred', 'Feel'],
-    bike: ['Speed', 'Bike', 'Gear', 'Ratio', 'Cadence', 'vs. preferred', 'Feel'],
+    single: ['Speed', 'Gear', 'Ratio', 'Cadence', 'vs. target'],
+    ring: ['Speed', 'Ring', 'Cog', 'Ratio', 'Cadence', 'vs. target'],
+    bike: ['Speed', 'Bike', 'Gear', 'Ratio', 'Cadence', 'vs. target'],
   }[layout];
   els.bySpeedThead.innerHTML = `<tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`;
 
@@ -645,7 +687,7 @@ function renderBySpeedTable(series, layout, ride) {
 
   els.bySpeedTbody.innerHTML = '';
   for (const { point, label, seriesIndex } of rows) {
-    const { best, feel, devFeel, speedDisplay } = point;
+    const { best, feel, speedDisplay } = point;
     const tr = document.createElement('tr');
     if (seriesIndex > 0) tr.classList.add('sub-row');
 
@@ -657,8 +699,7 @@ function renderBySpeedTable(series, layout, ride) {
     cells.push(
       best.ratio.toFixed(2),
       `${best.cadence.toFixed(0)} rpm`,
-      `<span class="pill ${feelPillClass(feel.label)}">${feel.label} (${feel.delta >= 0 ? '+' : ''}${feel.delta.toFixed(0)})</span>`,
-      `${devFeel.label} — ${devFeel.hint}`
+      `<span class="pill ${feelPillClass(feel.label)}">${feel.label} (${feel.delta >= 0 ? '+' : ''}${feel.delta.toFixed(0)})</span>`
     );
     tr.innerHTML = cells.map((c) => `<td>${c}</td>`).join('');
     els.bySpeedTbody.appendChild(tr);
@@ -671,7 +712,7 @@ function renderAllGearsTable(groups, ride) {
     if (showHeader) {
       const header = document.createElement('tr');
       header.className = 'group-row';
-      header.innerHTML = `<td colspan="8">${esc(label)}</td>`;
+      header.innerHTML = `<td colspan="7">${esc(label)}</td>`;
       els.allGearsTbody.appendChild(header);
     }
     for (const row of rows) {
@@ -685,7 +726,6 @@ function renderAllGearsTable(groups, ride) {
         row.gainRatio.toFixed(2),
         fmtSpeed(row.speedAtPreferredKmh, ride.unit),
         row.jumpPct === null ? '—' : `${row.jumpPct.toFixed(1)}%`,
-        row.feel.label,
       ]
         .map((c) => `<td>${c}</td>`)
         .join('');
@@ -901,6 +941,12 @@ function wireEvents() {
 
   els.calculateBtn.addEventListener('click', runCalculation);
 
+  els.speedUnit.addEventListener('change', () => {
+    convertSpeedFields(state.speedUnit, els.speedUnit.value);
+    state.speedUnit = els.speedUnit.value;
+    if (state.lastChart) runCalculation();
+  });
+
   // Geometry is measured at draw time, so a resize or rotate needs a redraw.
   let redrawTimer;
   window.addEventListener('resize', () => {
@@ -925,6 +971,8 @@ function wireEvents() {
 
 function init() {
   initStaticOptions();
+  renderSpeedPresets();
+  state.speedUnit = els.speedUnit.value;
   loadBikeIntoForm(activeBike());
   renderBikeTabs();
   wireEvents();

@@ -371,3 +371,27 @@ footer {
   .matrix-table tbody th[scope='row'] { width: 5.5rem; font-size: 0.72rem; }
   h1 { font-size: 1.35rem; }
 }
+
+.presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 14px;
+}
+.presets-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+#speed-presets { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.preset-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 11px;
+  border-radius: 4px;
+  font-size: 0.83rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.preset-btn:hover { background: var(--track); border-color: var(--accent); }
