@@ -133,6 +133,7 @@ function effectiveRingMode(bike, bikeCount) {
 const state = {
   bikes: [createBike('Bike 1')],
   activeIndex: 0,
+  lastChart: null, // kept so a viewport change can redraw at the new width
 };
 const activeBike = () => state.bikes[state.activeIndex];
 
@@ -572,6 +573,7 @@ function runCalculation() {
   showErrors([]);
 
   const { layout, series } = computeSeries(bikeCfgs, ride);
+  state.lastChart = { series, ride };
   renderSummary(computeSummaries(bikeCfgs, ride), ride);
   renderBySpeedTable(series, layout, ride);
   renderChart(series, ride);
@@ -608,12 +610,12 @@ function renderSummary(summaries, ride) {
     ['Total range', (s) => `${s.rangePct.toFixed(0)}%`],
     [
       'Cadence hold',
-      (s) => `<span title="Widest step ${s.worstStepPct.toFixed(1)}%">±${s.holdRpm.toFixed(1)} rpm</span>`,
+      (s) => `±${s.holdRpm.toFixed(1)} rpm<br><span class="muted-note">biggest jump ${s.worstStepPct.toFixed(1)}%</span>`,
     ],
     [
       'Coverage',
       (s) =>
-        `<span title="Holds ${ride.preferredCadence} rpm from ${fmtSpeed(s.coverage.lowKmh, ride.unit)} to ${fmtSpeed(s.coverage.highKmh, ride.unit)}">${(s.coverage.fraction * 100).toFixed(0)}%</span>`,
+        `${(s.coverage.fraction * 100).toFixed(0)}%<br><span class="muted-note">${fmtSpeed(s.coverage.lowKmh, ride.unit)} to ${fmtSpeed(s.coverage.highKmh, ride.unit)}</span>`,
     ],
     ['Easiest gear', (s) => gearCell(s.easiest)],
     ['Hardest gear', (s) => gearCell(s.hardest)],
@@ -692,7 +694,19 @@ function renderAllGearsTable(groups, ride) {
   }
 }
 
-const CHART_W = 720, CHART_PAD_L = 46, CHART_PAD_R = 16;
+const CHART_MAX_W = 720, CHART_MIN_W = 280, CHART_PAD_R = 16;
+
+/**
+ * Draw at the container's real pixel width so one SVG unit is one CSS pixel.
+ * With a fixed 720-wide viewBox, a 375px phone scaled everything to ~50% and
+ * the 9px delta labels rendered under 5px. Re-measured on every render.
+ */
+function chartMetrics() {
+  const measured = els.chart.clientWidth || els.chart.parentElement?.clientWidth || CHART_MAX_W;
+  const width = Math.max(CHART_MIN_W, Math.min(CHART_MAX_W, Math.round(measured)));
+  const narrow = width < 430;
+  return { width, padL: narrow ? 30 : 46, padR: CHART_PAD_R, maxXLabels: narrow ? 5 : 8 };
+}
 
 const CHART_STYLE = `
   <style>
@@ -729,8 +743,8 @@ function cadenceDomain(series, ride) {
   };
 }
 
-function xTickMarkup(speeds, xFor, y) {
-  const labelEvery = Math.max(1, Math.ceil(speeds.length / 8));
+function xTickMarkup(speeds, xFor, y, maxLabels) {
+  const labelEvery = Math.max(1, Math.ceil(speeds.length / maxLabels));
   return speeds
     .map((v, i) =>
       i % labelEvery === 0 || i === speeds.length - 1
@@ -772,12 +786,13 @@ function plotMarkup(s, ride, xFor, yFor, { dotRadius, labelEvery, plotTop, plotB
 
 /** One stacked panel per series, sharing a cadence axis and a single x-axis. */
 function renderChart(series, ride) {
+  const { width: W, padL, padR, maxXLabels } = chartMetrics();
   const padT = 10, gapY = 14, axisH = 34, titleH = 18;
   const panelH = series.length === 1 ? 190 : 132;
   const H = padT + series.length * (panelH + gapY) + axisH;
-  const innerW = CHART_W - CHART_PAD_L - CHART_PAD_R;
+  const innerW = W - padL - padR;
   const { minC, maxC } = cadenceDomain(series, ride);
-  const xFor = (i) => CHART_PAD_L + (i / Math.max(1, ride.speeds.length - 1)) * innerW;
+  const xFor = (i) => padL + (i / Math.max(1, ride.speeds.length - 1)) * innerW;
 
   // Thin the labels out rather than letting them collide at fine speed steps.
   const spacing = innerW / Math.max(1, ride.speeds.length - 1);
@@ -790,26 +805,26 @@ function renderChart(series, ride) {
     const plotBottom = top + panelH;
     const yFor = (c) => plotBottom - ((c - minC) / (maxC - minC)) * (plotBottom - plotTop);
 
-    body += `<text x="${CHART_PAD_L}" y="${top + 11}" class="panel-title" fill="${SERIES_COLORS[si % SERIES_COLORS.length]}">${esc(s.label)}</text>`;
+    body += `<text x="${padL}" y="${top + 11}" class="panel-title" fill="${SERIES_COLORS[si % SERIES_COLORS.length]}">${esc(s.label)}</text>`;
     for (const val of [maxC, minC]) {
       const y = yFor(val);
-      body += `<line x1="${CHART_PAD_L}" y1="${y}" x2="${CHART_W - CHART_PAD_R}" y2="${y}" class="grid-line" />`;
-      body += `<text x="${CHART_PAD_L - 8}" y="${y + 3}" class="axis-label" text-anchor="end">${val.toFixed(0)}</text>`;
+      body += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" class="grid-line" />`;
+      body += `<text x="${padL - 6}" y="${y + 3}" class="axis-label" text-anchor="end">${val.toFixed(0)}</text>`;
     }
     const prefY = yFor(ride.preferredCadence);
-    body += `<line x1="${CHART_PAD_L}" y1="${prefY}" x2="${CHART_W - CHART_PAD_R}" y2="${prefY}" class="pref-line" />`;
+    body += `<line x1="${padL}" y1="${prefY}" x2="${W - padR}" y2="${prefY}" class="pref-line" />`;
     if (si === 0) {
       // On the title row, not against the line — markers crowd the right edge.
-      body += `<text x="${CHART_W - CHART_PAD_R}" y="${top + 11}" class="target-label" text-anchor="end">- - - target ${ride.preferredCadence} rpm</text>`;
+      body += `<text x="${W - padR}" y="${top + 11}" class="target-label" text-anchor="end">- - - target ${ride.preferredCadence} rpm</text>`;
     }
     body += plotMarkup(s, ride, xFor, yFor, { dotRadius: 3.5, labelEvery, plotTop, plotBottom });
   });
 
   const axisY = padT + series.length * (panelH + gapY);
-  body += xTickMarkup(ride.speeds, xFor, axisY + 12);
-  body += `<text x="${CHART_W / 2}" y="${axisY + 28}" class="axis-title" text-anchor="middle">Speed (${unitLabel(ride.unit)})</text>`;
+  body += xTickMarkup(ride.speeds, xFor, axisY + 12, maxXLabels);
+  body += `<text x="${W / 2}" y="${axisY + 28}" class="axis-title" text-anchor="middle">Speed (${unitLabel(ride.unit)})</text>`;
 
-  els.chart.setAttribute('viewBox', `0 0 ${CHART_W} ${H}`);
+  els.chart.setAttribute('viewBox', `0 0 ${W} ${H}`);
   els.chart.innerHTML = CHART_STYLE + body;
 
   const ringKey = series.some((s) => s.cfg.rings.length > 1)
@@ -885,6 +900,14 @@ function wireEvents() {
   });
 
   els.calculateBtn.addEventListener('click', runCalculation);
+
+  // Geometry is measured at draw time, so a resize or rotate needs a redraw.
+  let redrawTimer;
+  window.addEventListener('resize', () => {
+    if (!state.lastChart) return;
+    clearTimeout(redrawTimer);
+    redrawTimer = setTimeout(() => renderChart(state.lastChart.series, state.lastChart.ride), 150);
+  });
 
   els.tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {

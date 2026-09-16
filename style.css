@@ -1,40 +1,25 @@
 :root {
-  color-scheme: light dark;
-  --bg: #f7f7f5;
+  color-scheme: light;
+  --bg: #f6f7f8;
   --panel-bg: #ffffff;
-  --text: #1c1c1e;
-  --muted: #6b6b70;
-  --border: #e0e0e0;
-  --accent: #d3542a;
+  --text: #1c2024;
+  --muted: #5c6670;
+  --border: #d7dde3;
+  --accent: #1f5fb5;
   --accent-contrast: #ffffff;
-  --track: #eceae6;
-  --good: #2f8f4e;
-  --warn: #c7871f;
-  --bad: #c1442c;
-  --series-1: #3b6fd4;
-  --series-2: #2f8f4e;
-  --series-3: #8a5cd0;
-  --series-4: #0f8f9f;
-}
+  --track: #eef1f4;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16161a;
-    --panel-bg: #1f1f24;
-    --text: #ececf0;
-    --muted: #9a9aa2;
-    --border: #35353d;
-    --accent: #e2703a;
-    --accent-contrast: #16161a;
-    --track: #2a2a31;
-    --good: #4fbf74;
-    --warn: #e0a63e;
-    --bad: #e2604a;
-    --series-1: #6f9bf0;
-    --series-2: #4fbf74;
-    --series-3: #b18cf0;
-    --series-4: #3fc0d0;
-  }
+  /* Status colours are reserved for cadence delta, so nothing else uses them. */
+  --good: #1a7f37;
+  --warn: #9a6700;
+  --bad: #c0362c;
+
+  /* Series colours deliberately avoid green/amber/red so a bike's identity
+     can never be mistaken for a cadence reading. */
+  --series-1: #1f5fb5;
+  --series-2: #6b3fa0;
+  --series-3: #0f6e6e;
+  --series-4: #5b6673;
 }
 
 * { box-sizing: border-box; }
@@ -70,7 +55,7 @@ main {
 .panel {
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 18px 20px;
 }
 
@@ -123,8 +108,8 @@ main {
   background: none;
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 7px;
+  padding: 5px 11px;
+  border-radius: 4px;
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
@@ -136,8 +121,8 @@ main {
   background: none;
   border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent);
   color: var(--bad);
-  padding: 6px 12px;
-  border-radius: 7px;
+  padding: 5px 11px;
+  border-radius: 4px;
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
@@ -191,8 +176,8 @@ label.checkbox-row {
 
 input, select {
   font-size: 0.95rem;
-  padding: 7px 9px;
-  border-radius: 7px;
+  padding: 6px 9px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -211,9 +196,9 @@ button#calculate-btn {
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  padding: 9px 18px;
+  border-radius: 4px;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
@@ -249,6 +234,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
 }
 
 th, td {
@@ -274,8 +260,9 @@ tr:hover td { background: var(--track); }
 .pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
 
 .chart-wrap {
-  background: var(--track);
-  border-radius: 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
   padding: 10px;
   margin-bottom: 16px;
 }
@@ -308,7 +295,7 @@ tr:hover td { background: var(--track); }
 
 .ring-mode {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 5px;
   padding: 10px 14px 12px;
   margin: 12px 0 0;
 }
@@ -349,7 +336,7 @@ tr.ring-shift td { border-top: 1px solid color-mix(in srgb, var(--accent) 55%, t
 .form-errors {
   margin: 12px 0 0;
   padding: 10px 14px 10px 30px;
-  border-radius: 8px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--bad) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
   color: var(--bad);
@@ -373,4 +360,14 @@ footer {
   padding: 0 24px 40px;
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+/* Phones: claw back horizontal space so the chart draws near full width. */
+@media (max-width: 560px) {
+  header, footer { padding-left: 14px; padding-right: 14px; }
+  main { padding: 8px 14px 32px; }
+  .panel { padding: 14px 12px; }
+  .chart-wrap { padding: 6px; }
+  .matrix-table tbody th[scope='row'] { width: 5.5rem; font-size: 0.72rem; }
+  h1 { font-size: 1.35rem; }
 }
